@@ -108,32 +108,37 @@ server <- function(input, output, session) {
   datasetInput <- reactive({
     data = filedata() 
     metadata = metadata()
-    ad.count <- as.matrix(data)
     
-    ad.metadata <- data.frame(metadata)
-    ad.batch = factor(ad.metadata$sequencing_run_date, 
-                      levels = unique(ad.metadata$sequencing_run_date))
-    ad.trt = as.factor(ad.metadata$initial_phenol_concentration.regroup)
-    names(ad.batch) <- names(ad.trt) <- rownames(ad.metadata)
-    
-    ad.filter.res <- PreFL(data = ad.count)
-    ad.filter <- ad.filter.res$data.filter
-    
-    ad.filter.res$zero.prob
-    sum(ad.filter == 0)/(nrow(ad.filter) * ncol(ad.filter))
-    
-    ad.clr <- logratio.transfo(X = ad.filter, logratio = 'CLR', offset = 1) 
-    class(ad.clr) = 'matrix'
-    
-    ad.factors.df <- data.frame(trt = ad.trt, batch = ad.batch)
-    class(ad.clr) <- 'matrix'
-    ad.rda.before <- varpart(ad.clr, ~ trt, ~ batch, 
-                             data = ad.factors.df, scale = TRUE)
-    ad.rda.before$part$indfract
+    if(is.null(data) | is.null(metadata)){
+      warning("Please upload files!")
+    } 
+    else{
+      ad.count <- as.matrix(data)
+      
+      ad.metadata <- data.frame(metadata)
+      ad.batch = factor(ad.metadata$sequencing_run_date, 
+                        levels = unique(ad.metadata$sequencing_run_date))
+      ad.trt = as.factor(ad.metadata$initial_phenol_concentration.regroup)
+      names(ad.batch) <- names(ad.trt) <- rownames(ad.metadata)
+      
+      ad.filter.res <- PreFL(data = ad.count)
+      ad.filter <- ad.filter.res$data.filter
+      
+      ad.filter.res$zero.prob
+      sum(ad.filter == 0)/(nrow(ad.filter) * ncol(ad.filter))
+      
+      ad.clr <- logratio.transfo(X = ad.filter, logratio = 'CLR', offset = 1) 
+      class(ad.clr) = 'matrix'
+      
+      ad.factors.df <- data.frame(trt = ad.trt, batch = ad.batch)
+      class(ad.clr) <- 'matrix'
+      ad.rda.before <- varpart(ad.clr, ~ trt, ~ batch, 
+                               data = ad.factors.df, scale = TRUE)
+      ad.rda.before$part$indfract
+    }
   })
   
-  
-  
+
   output$pRDAtable <- renderPrint({
     datasetInput()
   })
@@ -146,128 +151,168 @@ server <- function(input, output, session) {
     
     data = filedata() 
     metadata = metadata()
-    ad.count <- as.matrix(data)
     
-    ad.metadata <- data.frame(metadata)
-    ad.batch = factor(ad.metadata$sequencing_run_date, 
-                      levels = unique(ad.metadata$sequencing_run_date))
-    ad.trt = as.factor(ad.metadata$initial_phenol_concentration.regroup)
-    names(ad.batch) <- names(ad.trt) <- rownames(ad.metadata)
-    
-    ad.filter.res <- PreFL(data = ad.count)
-    ad.filter <- ad.filter.res$data.filter
-    
-    ad.filter.res$zero.prob
-    sum(ad.filter == 0)/(nrow(ad.filter) * ncol(ad.filter))
-    
-    ad.clr <- logratio.transfo(X = ad.filter, logratio = 'CLR', offset = 1) 
-    class(ad.clr) = 'matrix'
-    
-    ad.pca.before <- pca(ad.clr, ncomp = 3, scale = TRUE)
+    if(is.null(data) | is.null(metadata)){
+      warning("Please upload files!")
+    } 
+    else{
+      ad.count <- as.matrix(data)
+      
+      ad.metadata <- data.frame(metadata)
+      ad.batch = factor(ad.metadata$sequencing_run_date, 
+                        levels = unique(ad.metadata$sequencing_run_date))
+      ad.trt = as.factor(ad.metadata$initial_phenol_concentration.regroup)
+      names(ad.batch) <- names(ad.trt) <- rownames(ad.metadata)
+      
+      ad.filter.res <- PreFL(data = ad.count)
+      ad.filter <- ad.filter.res$data.filter
+      
+      ad.filter.res$zero.prob
+      sum(ad.filter == 0)/(nrow(ad.filter) * ncol(ad.filter))
+      
+      ad.clr <- logratio.transfo(X = ad.filter, logratio = 'CLR', offset = 1) 
+      class(ad.clr) = 'matrix'
+      
+      ad.pca.before <- pca(ad.clr, ncomp = 3, scale = TRUE)
+    }
     
     if (v[1] == "PCA") {
-      p1 = Scatter_Density(object = ad.pca.before, batch = ad.batch, trt = ad.trt, 
-                           title = 'Before correcting (PCA)', trt.legend.title = 'Phenol conc.')
+      if(!exists("ad.pca.before")){
+        warning("Please upload files!")
+      } 
+      else{
+        p1 = Scatter_Density(object = ad.pca.before, batch = ad.batch, trt = ad.trt, 
+                             title = 'Before correcting (PCA)', trt.legend.title = 'Phenol conc.')
+      }
     } 
     else if (v[1] == "Boxplots") {
-      ad.OTU.name <- selectVar(ad.pca.before, comp = 1)$name[1]
-      ad.OTU_batch <- data.frame(value = ad.clr[,ad.OTU.name], batch = ad.batch)
-      box_plot(df = ad.OTU_batch, title = paste(ad.OTU.name, '(Before correcting)'), 
-               x.angle = 30)
+      if(!exists("ad.pca.before")){
+        warning("Please upload files!")
+      } 
+      else{
+        ad.OTU.name <- selectVar(ad.pca.before, comp = 1)$name[1]
+        ad.OTU_batch <- data.frame(value = ad.clr[,ad.OTU.name], batch = ad.batch)
+        box_plot(df = ad.OTU_batch, title = paste(ad.OTU.name, '(Before correcting)'), 
+                 x.angle = 30)
+      }
     }
     else if (v[1] == "density plots") {
-      ad.OTU.name <- selectVar(ad.pca.before, comp = 1)$name[1]
-      ad.OTU_batch <- data.frame(value = ad.clr[,ad.OTU.name], batch = ad.batch)
-      density_plot(df = ad.OTU_batch, title = paste(ad.OTU.name, '(Before correcting)'))
+      if(!exists("ad.pca.before")){
+        warning("Please upload files!")
+      } 
+      else{
+        ad.OTU.name <- selectVar(ad.pca.before, comp = 1)$name[1]
+        ad.OTU_batch <- data.frame(value = ad.clr[,ad.OTU.name], batch = ad.batch)
+        density_plot(df = ad.OTU_batch, title = paste(ad.OTU.name, '(Before correcting)'))
+      }
     }
     else if (v[1] == "Heatmap"){
-      ad.clr.s <- scale(ad.clr, center = TRUE, scale = TRUE)
-      ad.clr.ss <- scale(t(ad.clr.s), center = TRUE, scale = TRUE)
-      
-      ad.anno_col <- data.frame(Batch = ad.batch, Treatment = ad.trt)
-      ad.anno_colors <- list(Batch = color.mixo(seq_len(5)), 
-                             Treatment = pb_color(seq_len(2)))
-      names(ad.anno_colors$Batch) = levels(ad.batch)
-      names(ad.anno_colors$Treatment) = levels(ad.trt)
-      
-      pheatmap(ad.clr.ss, 
-               cluster_rows = FALSE, 
-               fontsize_row = 4, 
-               fontsize_col = 6,
-               fontsize = 8,
-               clustering_distance_rows = 'euclidean',
-               clustering_method = 'ward.D',
-               treeheight_row = 30,
-               annotation_col = ad.anno_col,
-               annotation_colors = ad.anno_colors,
-               border_color = 'NA',
-               main = 'Before correcting - Scaled')
+      if(!exists("ad.clr")){
+        warning("Please upload files!")
+      } 
+      else{
+        ad.clr.s <- scale(ad.clr, center = TRUE, scale = TRUE)
+        ad.clr.ss <- scale(t(ad.clr.s), center = TRUE, scale = TRUE)
+        
+        ad.anno_col <- data.frame(Batch = ad.batch, Treatment = ad.trt)
+        ad.anno_colors <- list(Batch = color.mixo(seq_len(5)), 
+                               Treatment = pb_color(seq_len(2)))
+        names(ad.anno_colors$Batch) = levels(ad.batch)
+        names(ad.anno_colors$Treatment) = levels(ad.trt)
+        
+        pheatmap(ad.clr.ss, 
+                 cluster_rows = FALSE, 
+                 fontsize_row = 4, 
+                 fontsize_col = 6,
+                 fontsize = 8,
+                 clustering_distance_rows = 'euclidean',
+                 clustering_method = 'ward.D',
+                 treeheight_row = 30,
+                 annotation_col = ad.anno_col,
+                 annotation_colors = ad.anno_colors,
+                 border_color = 'NA',
+                 main = 'Before correcting - Scaled')
+      }
     }
   })
   
   output$PLSDA <- renderPlot({
     data = filedata() 
     metadata = metadata()
-    ad.count <- as.matrix(data)
     
-    ad.metadata <- data.frame(metadata)
-    ad.batch = factor(ad.metadata$sequencing_run_date, 
-                      levels = unique(ad.metadata$sequencing_run_date))
-    ad.trt = as.factor(ad.metadata$initial_phenol_concentration.regroup)
-    names(ad.batch) <- names(ad.trt) <- rownames(ad.metadata)
     
-    ad.filter.res <- PreFL(data = ad.count)
-    ad.filter <- ad.filter.res$data.filter
-    dim(ad.filter)
-    
-    ad.filter.res$zero.prob
-    sum(ad.filter == 0)/(nrow(ad.filter) * ncol(ad.filter))
-    
-    ad.clr <- logratio.transfo(X = ad.filter, logratio = 'CLR', offset = 1) 
-    class(ad.clr) = 'matrix'
-    
-    ad.PLSDA_batch.res <- PLSDA_batch(X = ad.clr, 
-                                      Y.trt = ad.trt, Y.bat = ad.batch,
-                                      ncomp.trt = input$ncomp_trt, ncomp.bat = input$ncomp_bat)
-    ad.PLSDA_batch <- ad.PLSDA_batch.res$X.nobatch
-    ad.pca.PLSDA_batch <- pca(ad.PLSDA_batch, ncomp = 3, scale = TRUE)
-    ad.pca.PLSDA_batch.plot <- Scatter_Density(object = ad.pca.PLSDA_batch, 
-                                               batch = ad.batch, 
-                                               trt = ad.trt, 
-                                               title = 'PLSDA-batch (after correcting)')
+    if(is.null(data) | is.null(metadata)){
+      warning("Please upload files!")
+    } 
+    else{
+      ad.count <- as.matrix(data)
+      
+      ad.metadata <- data.frame(metadata)
+      ad.batch = factor(ad.metadata$sequencing_run_date, 
+                        levels = unique(ad.metadata$sequencing_run_date))
+      ad.trt = as.factor(ad.metadata$initial_phenol_concentration.regroup)
+      names(ad.batch) <- names(ad.trt) <- rownames(ad.metadata)
+      
+      ad.filter.res <- PreFL(data = ad.count)
+      ad.filter <- ad.filter.res$data.filter
+      dim(ad.filter)
+      
+      ad.filter.res$zero.prob
+      sum(ad.filter == 0)/(nrow(ad.filter) * ncol(ad.filter))
+      
+      ad.clr <- logratio.transfo(X = ad.filter, logratio = 'CLR', offset = 1) 
+      class(ad.clr) = 'matrix'
+      
+      ad.PLSDA_batch.res <- PLSDA_batch(X = ad.clr, 
+                                        Y.trt = ad.trt, Y.bat = ad.batch,
+                                        ncomp.trt = input$ncomp_trt, ncomp.bat = input$ncomp_bat)
+      ad.PLSDA_batch <- ad.PLSDA_batch.res$X.nobatch
+      ad.pca.PLSDA_batch <- pca(ad.PLSDA_batch, ncomp = 3, scale = TRUE)
+      ad.pca.PLSDA_batch.plot <- Scatter_Density(object = ad.pca.PLSDA_batch, 
+                                                 batch = ad.batch, 
+                                                 trt = ad.trt, 
+                                                 title = 'PLSDA-batch (after correcting)')
+    }
   })
   
   output$sPLSDA <- renderPlot({
     data = filedata() 
     metadata = metadata()
-    ad.count <- as.matrix(data)
     
-    ad.metadata <- data.frame(metadata)
-    ad.batch = factor(ad.metadata$sequencing_run_date, 
-                      levels = unique(ad.metadata$sequencing_run_date))
-    ad.trt = as.factor(ad.metadata$initial_phenol_concentration.regroup)
-    names(ad.batch) <- names(ad.trt) <- rownames(ad.metadata)
     
-    ad.filter.res <- PreFL(data = ad.count)
-    ad.filter <- ad.filter.res$data.filter
-    dim(ad.filter)
-    
-    ad.filter.res$zero.prob
-    sum(ad.filter == 0)/(nrow(ad.filter) * ncol(ad.filter))
-    
-    ad.clr <- logratio.transfo(X = ad.filter, logratio = 'CLR', offset = 1) 
-    class(ad.clr) = 'matrix'
-    
-    ad.sPLSDA_batch.res <- PLSDA_batch(X = ad.clr, 
-                                       Y.trt = ad.trt, Y.bat = ad.batch,
-                                       ncomp.trt = input$ncomp_trt, keepX.trt = input$keepX_trt,
-                                       ncomp.bat = input$ncomp_bat)
-    ad.sPLSDA_batch <- ad.sPLSDA_batch.res$X.nobatch
-    ad.pca.sPLSDA_batch <- pca(ad.sPLSDA_batch, ncomp = 3, scale = TRUE)
-    ad.pca.sPLSDA_batch.plot <- Scatter_Density(object = ad.pca.sPLSDA_batch, 
-                                                batch = ad.batch, 
-                                                trt = ad.trt, 
-                                                title = 'sPLSDA-batch (after correcting)')
+    if(is.null(expression) | is.null(gene)){
+      warning("Please upload files!")
+    } 
+    else{
+      ad.count <- as.matrix(data)
+      
+      ad.metadata <- data.frame(metadata)
+      ad.batch = factor(ad.metadata$sequencing_run_date, 
+                        levels = unique(ad.metadata$sequencing_run_date))
+      ad.trt = as.factor(ad.metadata$initial_phenol_concentration.regroup)
+      names(ad.batch) <- names(ad.trt) <- rownames(ad.metadata)
+      
+      ad.filter.res <- PreFL(data = ad.count)
+      ad.filter <- ad.filter.res$data.filter
+      dim(ad.filter)
+      
+      ad.filter.res$zero.prob
+      sum(ad.filter == 0)/(nrow(ad.filter) * ncol(ad.filter))
+      
+      ad.clr <- logratio.transfo(X = ad.filter, logratio = 'CLR', offset = 1) 
+      class(ad.clr) = 'matrix'
+      
+      ad.sPLSDA_batch.res <- PLSDA_batch(X = ad.clr, 
+                                         Y.trt = ad.trt, Y.bat = ad.batch,
+                                         ncomp.trt = input$ncomp_trt, keepX.trt = input$keepX_trt,
+                                         ncomp.bat = input$ncomp_bat)
+      ad.sPLSDA_batch <- ad.sPLSDA_batch.res$X.nobatch
+      ad.pca.sPLSDA_batch <- pca(ad.sPLSDA_batch, ncomp = 3, scale = TRUE)
+      ad.pca.sPLSDA_batch.plot <- Scatter_Density(object = ad.pca.sPLSDA_batch, 
+                                                  batch = ad.batch, 
+                                                  trt = ad.trt, 
+                                                  title = 'sPLSDA-batch (after correcting)')
+    }
   })
   
   output$downloadData <- downloadHandler(
